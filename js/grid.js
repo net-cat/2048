@@ -33,9 +33,99 @@ Grid.prototype.fromState = function (state) {
   return cells;
 };
 
+// Filter occupied cells out of array
+Grid.prototype.filterOccupiedCellsFromArray = function (cells) {
+  var available = [];
+  cells.forEach(function(cell) {
+    if ( this.cellAvailable(cell) ) {
+      available.push(cell)
+    }
+  }, this);
+  return available;
+};
+
+// Find largest numbered cell in grid
+Grid.prototype.findLargestCell = function(cap) {
+  return this.findLargestCellUnder(false);
+};
+
+// Find largest numbered cell in grid under cap
+Grid.prototype.findLargestCellUnder = function(cap) {
+  var highest = {value:0};
+  this.eachCell(function (x, y, tile) {
+    if ( tile ) {
+      if ( tile.value > highest.value ) {
+        if ( !cap || cap > tile.value ) {
+          highest = tile;
+        }
+      }
+    }
+  });
+  return highest;
+};
+
 // Find the first available random position
 Grid.prototype.randomAvailableCell = function () {
-  var cells = this.availableCells();
+  var highest = this.findLargestCell();
+  var cells = [];
+
+  // Until we get to 128, game plays normally.
+  if ( highest.value >= 128 ) {
+    // First, try to add a block between the largest block we can and the wall.
+    var bastard_cells = [];
+    var capped_highest = highest;
+    while(capped_highest.value >= 32) {
+      if ( capped_highest.x == 1 ) {
+        bastard_cells.push({x: 0, y: capped_highest.y});
+      }
+      if ( capped_highest.x == 2 ) {
+        bastard_cells.push({x: 3, y: capped_highest.y});
+      }
+      if ( capped_highest.y == 1 ) {
+        bastard_cells.push({x: capped_highest.x, y: 0});
+      }
+      if ( capped_highest.y == 2 ) {
+        bastard_cells.push({x: capped_highest.x, y: 3});
+      }
+      cells = this.filterOccupiedCellsFromArray(bastard_cells);
+      if ( cells.length ) {
+        break;
+      }
+      capped_highest = this.findLargestCellUnder(capped_highest.value);
+    }
+    cells = this.filterOccupiedCellsFromArray(bastard_cells);
+
+    // If we can't do that, try to force a block to move by keeping edges empty.
+    var emptiestEdge = [];
+    if (!cells.length) {
+      var edgeX0 = this.filterOccupiedCellsFromArray([{x:0,y:0},{x:0,y:1},{x:0,y:2},{x:0,y:3}]);
+      var edgeX3 = this.filterOccupiedCellsFromArray([{x:3,y:0},{x:3,y:1},{x:3,y:2},{x:3,y:3}]);
+      var edgeY0 = this.filterOccupiedCellsFromArray([{x:0,y:0},{x:1,y:0},{x:2,y:0},{x:3,y:0}]);
+      var edgeY3 = this.filterOccupiedCellsFromArray([{x:0,y:3},{x:1,y:3},{x:2,y:3},{x:3,y:3}]);
+      var edges = [edgeX0, edgeX3, edgeY0, edgeY3];
+
+      edges.forEach(function(edge) {
+        if ( emptiestEdge.length < edge.length ) {
+          emptiestEdge = edge;
+        }
+      });
+
+      cells = this.availableCells();
+      emptiestEdge.forEach(function(cell) {
+        for ( var i = 0; i < cells.length; ++i ) {
+          if ( cells[i].x == cell.x && cells[i].y == cell.y ) {
+            cells.splice(i, 1);
+            break;
+          }
+        }
+       });
+    }
+  }
+
+  // Finally, just pick a random cell if we can't do anything else.
+  if (!cells.length) {
+    cells = this.availableCells();
+  }
 
   if (cells.length) {
     return cells[Math.floor(Math.random() * cells.length)];
