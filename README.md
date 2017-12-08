@@ -23,4 +23,3 @@ Changes and improvements are more than welcome! Feel free to fork and open a pul
 
 ## Donations
 Donate to the original author: `1Ec6onfsQmoP9kkL3zkpB6c5sA4PVcXU2i`  
-Donate to me: `1LFMmVGbyxaaF5A3wBAAMv9YdzeH9cUynU`
